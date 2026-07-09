@@ -40,6 +40,7 @@ class NovelProject:
         (project_root / "bible").mkdir(exist_ok=True)
         (project_root / "outlines").mkdir(exist_ok=True)
         (project_root / "chapters").mkdir(exist_ok=True)
+        (project_root / "summaries").mkdir(exist_ok=True)
 
         config = NovelConfig(
             title=title,
@@ -79,7 +80,26 @@ class NovelProject:
     def chapter_path(self, number: int, *, suffix: str = ".md") -> Path:
         return self.root / "chapters" / f"ch{number:03d}{suffix}"
 
-    def read_context(self) -> str:
+    def summary_path(self, number: int) -> Path:
+        return self.root / "summaries" / f"ch{number:03d}.md"
+
+    def read_summaries(self, *, before_chapter: int | None = None) -> str:
+        summary_dir = self.root / "summaries"
+        if not summary_dir.exists():
+            return ""
+
+        parts: list[str] = []
+        for path in sorted(summary_dir.glob("ch*.md")):
+            chapter_number = self._chapter_number_from_path(path)
+            if chapter_number is None:
+                continue
+            if before_chapter is not None and chapter_number >= before_chapter:
+                continue
+            relative = path.relative_to(self.root).as_posix()
+            parts.append(f"## {relative}\n\n{path.read_text(encoding='utf-8')}")
+        return "\n\n".join(parts)
+
+    def read_context(self, *, before_chapter: int | None = None) -> str:
         parts: list[str] = []
         for relative in [
             "novel.yaml",
@@ -94,7 +114,20 @@ class NovelProject:
             path = self.root / relative
             if path.exists():
                 parts.append(f"## {relative}\n\n{path.read_text(encoding='utf-8')}")
+        summaries = self.read_summaries(before_chapter=before_chapter)
+        if summaries:
+            parts.append(f"# Chapter Summaries\n\n{summaries}")
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _chapter_number_from_path(path: Path) -> int | None:
+        stem = path.stem
+        if not stem.startswith("ch"):
+            return None
+        try:
+            return int(stem[2:])
+        except ValueError:
+            return None
 
     @staticmethod
     def _write_if_missing(path: Path, content: str) -> None:

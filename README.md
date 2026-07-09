@@ -63,10 +63,13 @@ novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
 novel-agent write ./my-novel --chapter 1 --goal "主角在雪夜发现第一具尸体"
+novel-agent summarize ./my-novel --chapter 1
 novel-agent review ./my-novel --chapter 1
 ```
 
 如果 `chapters/ch001.md` 已经存在，`write` 默认不会覆盖它，而是写入 `chapters/ch001.draft.md`。如果确实要覆盖，使用 `--force`。
+
+`summarize` 会把章节正文压缩成可复用的长篇记忆，写入 `summaries/ch001.md`。后续写第 N 章时，`write` 会自动读取前面章节的摘要，帮助模型保持剧情、人物和伏笔连续。
 
 ## 命令列表
 
@@ -76,6 +79,7 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent summarize PATH --chapter 1
 novel-agent review PATH --chapter 1
 ```
 
@@ -95,7 +99,9 @@ my-novel/
 ├── outlines/
 │   ├── arc.md
 │   └── chapters.md
-└── chapters/
+├── chapters/
+│   └── ch001.md
+└── summaries/
     └── ch001.md
 ```
 
@@ -114,7 +120,7 @@ mypy src/novel_agent
 - [x] OpenAI-compatible LLM 封装
 - [x] Prompt 模板
 - [x] `brainstorm` / `outline` / `write` / `review` 命令
-- [ ] 章节摘要记忆
+- [x] 章节摘要记忆
 - [ ] 一致性检查器
 - [ ] 场景级写作
 - [ ] 本地模型使用示例
@@ -173,10 +179,13 @@ novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
 novel-agent write ./my-novel --chapter 1 --goal "主角在雪夜发现第一具尸体"
+novel-agent summarize ./my-novel --chapter 1
 novel-agent review ./my-novel --chapter 1
 ```
 
 If `chapters/ch001.md` already exists, `write` will create `chapters/ch001.draft.md` unless `--force` is used.
+
+`summarize` compresses a chapter into reusable long-form memory under `summaries/ch001.md`. When drafting chapter N, `write` can include previous chapter summaries so the model keeps plot, character, and foreshadowing continuity.
 
 ## Commands
 
@@ -186,6 +195,7 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent summarize PATH --chapter 1
 novel-agent review PATH --chapter 1
 ```
 
@@ -203,7 +213,9 @@ my-novel/
 ├── outlines/
 │   ├── arc.md
 │   └── chapters.md
-└── chapters/
+├── chapters/
+│   └── ch001.md
+└── summaries/
     └── ch001.md
 ```
 
@@ -222,7 +234,7 @@ mypy src/novel_agent
 - [x] OpenAI-compatible LLM wrapper
 - [x] Prompt templates
 - [x] `brainstorm` / `outline` / `write` / `review` commands
-- [ ] Chapter summary memory
+- [x] Chapter summary memory
 - [ ] Continuity checker
 - [ ] Scene-level drafting
 - [ ] Local model support examples
