@@ -1,26 +1,29 @@
-# Prompting Guide
+# Prompt 编写指南
 
-## Rules
+## 规则
 
-1. Prompts should be stored in `src/novel_agent/prompts/*.j2`, not hardcoded in Python.
-2. Inputs should include project context, chapter goal, style guide, and constraints.
-3. Outputs should be Markdown so users can edit and version-control results.
-4. Ask the model not to overwrite established facts.
-5. Require concrete scenes, actions, dialogue, and sensory details.
+1. Prompt 应保存在 `src/novel_agent/prompts/*.j2`，不要硬编码在 Python 逻辑里。
+2. 输入应包含项目上下文、章节目标、文风指南和明确约束。
+3. 输出应使用 Markdown，方便用户编辑、diff 和版本管理。
+4. 必须提醒模型不要覆盖或推翻已经建立的事实。
+5. 要求模型写具体场景、动作、对白和感官细节，避免空泛总结腔。
+6. 面向用户的 Prompt 和文档默认使用中文；如果需要英文示例，再单独补充英文段落。
 
-## Template Variables
+## 模板变量
 
-Common variables:
+常用变量：
 
-- `title`
-- `context`
-- `chapter_number`
-- `chapter_goal`
-- `chapter_text`
-- `style`
+- `title`：小说标题
+- `context`：项目上下文
+- `chapter_number`：章节编号
+- `chapter_goal`：章节目标
+- `chapter_text`：章节正文
+- `style`：文风要求
 
-## Anti-patterns
+## 反模式
 
-- “随便发挥写一章” without constraints.
-- Long hidden prompts inside Python code.
-- Asking the model to rewrite user-edited files without confirmation.
+- 只写“随便发挥写一章”，没有上下文和约束。
+- 把很长的隐藏 Prompt 写在 Python 代码里。
+- 在没有确认的情况下要求模型重写用户已经编辑过的文件。
+- 让模型发明项目上下文中不存在的设定来修补剧情。
+- 只要求“更好看/更精彩”，但不给可执行的评价标准。
