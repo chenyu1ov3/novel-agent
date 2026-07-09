@@ -6,10 +6,19 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from novel_agent.agents import MultiAgentOrchestrator
 from novel_agent.config import get_settings
 from novel_agent.llm import LLMClient
 from novel_agent.project import NovelProject
 from novel_agent.prompting import render_prompt
+from novel_agent.vector_store import (
+    EmbeddingProvider,
+    HashEmbeddingProvider,
+    LocalVectorStore,
+    OpenAIEmbeddingProvider,
+    PgVectorStore,
+    RetrievalEngine,
+)
 
 app = typer.Typer(help="AI-assisted long-form novel writing agent.")
 console = Console()
@@ -23,6 +32,55 @@ def _client() -> LLMClient:
         api_key=api_key,
         base_url=settings.openai_base_url,
     )
+
+
+def _embedding_provider() -> EmbeddingProvider:
+    settings = get_settings()
+    if settings.novel_agent_embedding_model:
+        api_key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else None
+        return OpenAIEmbeddingProvider(
+            model=settings.novel_agent_embedding_model,
+            dimensions=settings.novel_agent_embedding_dimensions,
+            api_key=api_key,
+            base_url=settings.openai_base_url,
+        )
+    return HashEmbeddingProvider(dimensions=settings.novel_agent_embedding_dimensions)
+
+
+def _local_retrieval(project: NovelProject) -> RetrievalEngine:
+    embeddings = _embedding_provider()
+    store = LocalVectorStore(dimensions=embeddings.dimensions, persist_path=project.local_vector_path())
+    return RetrievalEngine(store=store, embeddings=embeddings)
+
+
+def _pgvector_unavailable_error() -> typer.BadParameter:
+    return typer.BadParameter(
+        "pgvector requires psycopg. Install with: pip install -e '.[pgvector]'"
+    )
+
+
+def _open_pgvector_store(project: NovelProject) -> PgVectorStore:
+    settings = get_settings()
+    if settings.novel_agent_pgvector_dsn is None:
+        raise typer.BadParameter("NOVEL_AGENT_PGVECTOR_DSN is required for --backend pgvector")
+    try:
+        import psycopg  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise _pgvector_unavailable_error() from exc
+    connection = psycopg.connect(settings.novel_agent_pgvector_dsn.get_secret_value())
+    table_name = settings.novel_agent_pgvector_table or project.config.memory.pgvector_table
+    return PgVectorStore(
+        connection=connection,
+        table_name=table_name,
+        dimensions=_embedding_provider().dimensions,
+    )
+
+
+def _write_output(target: Path, text: str, *, force: bool, exists_message: str) -> None:
+    if target.exists() and not force:
+        raise typer.BadParameter(exists_message)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
 
 
 @app.command()
@@ -228,6 +286,66 @@ def compose_chapter(
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
     console.print(f"[green]Wrote[/green] {target}")
+
+
+@app.command("agent-run")
+def agent_run(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+    goal: Annotated[str, typer.Option("--goal", help="Chapter-specific goal.")] = "按章节大纲推进剧情",
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing chapter file.")] = False,
+    use_retrieval: Annotated[
+        bool,
+        typer.Option("--retrieval/--no-retrieval", help="Use indexed vector memory when available."),
+    ] = True,
+) -> None:
+    """Draft a chapter through the planner/continuity/writer/editor/critic agent pipeline."""
+
+    project = NovelProject.load(path)
+    target = project.chapter_path(chapter)
+    if target.exists() and not force:
+        target = project.chapter_path(chapter, suffix=".draft.md")
+    retrieval = _local_retrieval(project) if use_retrieval else None
+    orchestrator = MultiAgentOrchestrator(
+        project=project,
+        client=_client(),
+        retrieval=retrieval,
+    )
+    result = orchestrator.draft_chapter(chapter=chapter, goal=goal)
+    _write_output(
+        target,
+        result.final_text,
+        force=True,
+        exists_message=f"Chapter already exists: {target}.",
+    )
+    trace_path = orchestrator.save_run(result)
+    console.print(
+        f"[green]Wrote[/green] {target} and {trace_path} ({len(result.steps)} agent steps)"
+    )
+
+
+@app.command("index-memory")
+def index_memory(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    backend: Annotated[str, typer.Option("--backend", help="Vector backend: local or pgvector.")] = "local",
+) -> None:
+    """Index project bible/outlines/chapters into vector memory."""
+
+    project = NovelProject.load(path)
+    embeddings = _embedding_provider()
+    if backend == "pgvector":
+        store = _open_pgvector_store(project)
+        store.ensure_schema()
+        count = store.index_project(project, embeddings)
+        console.print(
+            f"[green]Indexed[/green] {count} memory chunks into pgvector table {store.table_name}"
+        )
+        return
+    if backend != "local":
+        raise typer.BadParameter("backend must be 'local' or 'pgvector'")
+    local_store = LocalVectorStore(dimensions=embeddings.dimensions, persist_path=project.local_vector_path())
+    count = local_store.index_project(project, embeddings)
+    console.print(f"[green]Indexed[/green] {count} memory chunks into {project.local_vector_path()}")
 
 
 @app.command()

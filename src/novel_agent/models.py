@@ -9,6 +9,29 @@ from pydantic import BaseModel, Field
 ChapterStatus = Literal["planned", "drafted", "reviewed", "revised"]
 
 
+class AgentConfig(BaseModel):
+    """Runtime defaults for the multi-agent writing pipeline."""
+
+    enabled: bool = True
+    roles: list[str] = Field(
+        default_factory=lambda: [
+            "story_architect",
+            "continuity_guardian",
+            "scene_writer",
+            "style_editor",
+            "critic",
+        ]
+    )
+
+
+class MemoryConfig(BaseModel):
+    """Project memory and vector-search configuration."""
+
+    backend: Literal["local", "pgvector"] = "local"
+    embedding_dimensions: int = 256
+    pgvector_table: str = "novel_memory"
+
+
 class NovelConfig(BaseModel):
     """Top-level configuration for a novel project."""
 
@@ -19,6 +42,8 @@ class NovelConfig(BaseModel):
     pov: str = "第三人称有限视角"
     style: str = "清晰、有画面感、避免空泛AI腔"
     premise: str = ""
+    agents: AgentConfig = Field(default_factory=AgentConfig)
+    memory: MemoryConfig = Field(default_factory=MemoryConfig)
 
 
 class Character(BaseModel):

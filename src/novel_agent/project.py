@@ -42,6 +42,8 @@ class NovelProject:
         (project_root / "chapters").mkdir(exist_ok=True)
         (project_root / "summaries").mkdir(exist_ok=True)
         (project_root / "scenes").mkdir(exist_ok=True)
+        (project_root / "memory").mkdir(exist_ok=True)
+        (project_root / "runs").mkdir(exist_ok=True)
         (project_root / "outlines" / "scenes").mkdir(parents=True, exist_ok=True)
 
         config = NovelConfig(
@@ -87,6 +89,17 @@ class NovelProject:
 
     def scene_outline_path(self, chapter: int) -> Path:
         return self.root / "outlines" / "scenes" / f"ch{chapter:03d}.md"
+
+    @property
+    def memory_dir(self) -> Path:
+        return self.root / "memory"
+
+    @property
+    def runs_dir(self) -> Path:
+        return self.root / "runs"
+
+    def local_vector_path(self) -> Path:
+        return self.memory_dir / "vectors.jsonl"
 
     def scene_path(self, chapter: int, scene: int) -> Path:
         return self.root / "scenes" / f"ch{chapter:03d}" / f"s{scene:03d}.md"

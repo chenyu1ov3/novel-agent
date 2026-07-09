@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     openai_api_key: SecretStr | None = None
     novel_agent_model: str = "gpt-4o-mini"
+    novel_agent_embedding_dimensions: int = 256
+    novel_agent_embedding_model: str | None = None
+    novel_agent_memory_backend: str = "local"
+    novel_agent_pgvector_dsn: SecretStr | None = None
+    novel_agent_pgvector_table: str = "novel_memory"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
