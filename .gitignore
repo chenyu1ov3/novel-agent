@@ -5,13 +5,23 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-build/
-dist/
+.coverage
+htmlcov/
+
+# Virtual environments
 .venv/
+venv/
 
 # Local secrets
 .env
 
+# Build outputs
+dist/
+build/
+
 # Generated drafts that users may not want to commit by default
 *.draft.md
 *.review.tmp.md
+
+# Local novel-agent runtime artifacts
+**/memory/vectors.jsonl

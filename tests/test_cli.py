@@ -18,6 +18,8 @@ def test_cli_help_shows_core_commands():
     assert "plan-scenes" in result.output
     assert "write-scene" in result.output
     assert "compose-chapter" in result.output
+    assert "index-memory" in result.output
+    assert "agent-run" in result.output
 
 
 def test_init_command_creates_project(tmp_path):
@@ -194,3 +196,40 @@ def test_compose_chapter_command_supports_force_overwrite(tmp_path):
 
     assert result.exit_code == 0
     assert "新章节" in chapter_path.read_text(encoding="utf-8")
+
+
+def test_index_memory_command_builds_local_vector_index(tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    (target / "bible" / "characters.md").write_text("# Characters\n\n沈青有一枚铜铃。", encoding="utf-8")
+
+    result = runner.invoke(app, ["index-memory", str(target)])
+
+    assert result.exit_code == 0
+    assert (target / "memory" / "vectors.jsonl").exists()
+    assert "Indexed" in result.output
+
+
+def test_agent_run_command_writes_chapter_and_trace(monkeypatch, tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    (target / "bible" / "characters.md").write_text("# Characters\n\n沈青有一枚铜铃。", encoding="utf-8")
+    runner.invoke(app, ["index-memory", str(target)])
+
+    class FakeClient:
+        def complete(self, system: str, user: str, *, temperature: float = 0.7) -> str:
+            if "文风润色编辑" in system:
+                return "# 第 1 章\n\n沈青拾起铜铃。"
+            if "终审批评家" in system:
+                return "终审通过。"
+            return "中间结果：铜铃线索。"
+
+    monkeypatch.setattr("novel_agent.cli._client", lambda: FakeClient())
+
+    result = runner.invoke(app, ["agent-run", str(target), "--chapter", "1", "--goal", "发现铜铃"])
+
+    assert result.exit_code == 0
+    assert "沈青拾起铜铃" in (target / "chapters" / "ch001.md").read_text(encoding="utf-8")
+    traces = list((target / "runs").glob("ch001-*.md"))
+    assert traces
+    assert "终审通过" in traces[0].read_text(encoding="utf-8")

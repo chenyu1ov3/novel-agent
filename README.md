@@ -6,7 +6,7 @@
 
 ## 中文
 
-`novel-agent` 是一个面向长篇小说创作的 AI 写作智能体。它会把一本小说维护成可读、可版本控制的 Markdown/YAML 项目，然后通过 Prompt 模板和 OpenAI-compatible 模型完成灵感发散、大纲规划、章节草稿和审稿。
+`novel-agent` 是一个面向长篇小说创作的 AI 写作智能体。它会把一本小说维护成可读、可版本控制的 Markdown/YAML 项目，然后通过 Prompt 模板、向量记忆和多 Agent 编排完成灵感发散、大纲规划、章节草稿、连续性检查和审稿。
 
 默认目标是：**中文长篇类型小说 / 网文辅助创作**。
 
@@ -24,6 +24,9 @@
 
 - `bible/`：梗概、世界观、角色卡、时间线、文风指南
 - `outlines/`：主线大纲、章节大纲
+- `summaries/`：章节摘要和长期剧情记忆
+- `memory/`：本地向量索引（可替换为 pgvector）
+- `runs/`：多 Agent 运行轨迹，便于复盘每一步决策
 - `chapters/`：生成或人工修改后的章节草稿
 
 人类作者保留最终控制权，AI 输出可以编辑、diff、回滚和持续迭代。
@@ -50,9 +53,28 @@ cp .env.example .env
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 NOVEL_AGENT_MODEL=gpt-4o-mini
+
+# 默认本地向量记忆：无需额外服务
+NOVEL_AGENT_MEMORY_BACKEND=local
+NOVEL_AGENT_EMBEDDING_MODEL=
+NOVEL_AGENT_EMBEDDING_DIMENSIONS=256
 ```
 
 只要服务商兼容 OpenAI API，就可以通过修改 `OPENAI_BASE_URL` 和 `NOVEL_AGENT_MODEL` 接入，例如 OpenAI、DeepSeek、Qwen、Moonshot、OpenRouter、本地 vLLM 等。
+
+如果要启用生产级 embedding + pgvector：
+
+```bash
+pip install -e '.[pgvector]'
+```
+
+```env
+NOVEL_AGENT_MEMORY_BACKEND=pgvector
+NOVEL_AGENT_EMBEDDING_MODEL=text-embedding-3-small
+NOVEL_AGENT_EMBEDDING_DIMENSIONS=1536
+NOVEL_AGENT_PGVECTOR_DSN=postgresql://user:replace-me@localhost:5432/novel_agent
+NOVEL_AGENT_PGVECTOR_TABLE=novel_memory
+```
 
 > 注意：不要提交真实 `.env`，仓库只提交 `.env.example`。
 
@@ -62,6 +84,8 @@ NOVEL_AGENT_MODEL=gpt-4o-mini
 novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
+novel-agent index-memory ./my-novel
+novel-agent agent-run ./my-novel --chapter 1 --goal "失忆剑客在雪夜发现第一条旧案线索"
 novel-agent plan-scenes ./my-novel --chapter 1
 novel-agent write-scene ./my-novel --chapter 1 --scene 1
 novel-agent compose-chapter ./my-novel --chapter 1
@@ -86,6 +110,8 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent index-memory PATH [--backend local|pgvector]
+novel-agent agent-run PATH --chapter 1 --goal GOAL
 novel-agent plan-scenes PATH --chapter 1
 novel-agent write-scene PATH --chapter 1 --scene 1
 novel-agent compose-chapter PATH --chapter 1
@@ -116,6 +142,10 @@ my-novel/
 │   └── ch001/
 │       ├── s001.md
 │       └── s002.md
+├── memory/
+│   └── vectors.jsonl
+├── runs/
+│   └── ch001-YYYYMMDD-HHMMSS.md
 ├── chapters/
 │   ├── ch001.md
 │   └── ch001.continuity.md
@@ -141,14 +171,15 @@ mypy src/novel_agent
 - [x] 章节摘要记忆
 - [x] 一致性检查器
 - [x] 场景级写作
-- [ ] 本地模型使用示例
+- [x] 多 Agent 章节生成管线
+- [x] 本地向量记忆与 pgvector 架构支持
 - [ ] Web UI
 
 ---
 
 ## English
 
-`novel-agent` is an AI-assisted long-form novel writing agent. It keeps a novel project as readable, version-controllable Markdown/YAML files, then uses prompt templates and an OpenAI-compatible LLM to brainstorm, outline, draft, and review chapters.
+`novel-agent` is an AI-assisted long-form novel writing agent. It keeps a novel project as readable, version-controllable Markdown/YAML files, then uses prompt templates, vector memory, and multi-agent orchestration to brainstorm, outline, draft, check continuity, and review chapters.
 
 The default focus is **Chinese long-form genre fiction / web novel assisted writing**.
 
@@ -158,6 +189,9 @@ Long-form fiction often breaks when the model forgets characters, timeline, styl
 
 - `bible/`: premise, world, characters, timeline, style guide
 - `outlines/`: story arc and chapter outline
+- `summaries/`: reusable chapter summaries and long-form memory
+- `memory/`: local vector index, replaceable with pgvector
+- `runs/`: multi-agent traces for every orchestrated chapter run
 - `chapters/`: generated or manually edited chapter drafts
 
 The human author stays in control; AI output is editable, diffable, reversible, and iterative.
@@ -184,9 +218,28 @@ Example `.env`:
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_API_KEY=replace-me
 NOVEL_AGENT_MODEL=gpt-4o-mini
+
+# Default local vector memory: no extra service required
+NOVEL_AGENT_MEMORY_BACKEND=local
+NOVEL_AGENT_EMBEDDING_MODEL=
+NOVEL_AGENT_EMBEDDING_DIMENSIONS=256
 ```
 
 Any OpenAI-compatible provider can be used by changing `OPENAI_BASE_URL` and `NOVEL_AGENT_MODEL`, including OpenAI, DeepSeek, Qwen, Moonshot, OpenRouter, or a local vLLM endpoint.
+
+For production embeddings + pgvector:
+
+```bash
+pip install -e '.[pgvector]'
+```
+
+```env
+NOVEL_AGENT_MEMORY_BACKEND=pgvector
+NOVEL_AGENT_EMBEDDING_MODEL=text-embedding-3-small
+NOVEL_AGENT_EMBEDDING_DIMENSIONS=1536
+NOVEL_AGENT_PGVECTOR_DSN=postgresql://user:replace-me@localhost:5432/novel_agent
+NOVEL_AGENT_PGVECTOR_TABLE=novel_memory
+```
 
 > Do not commit a real `.env`; only `.env.example` belongs in the repository.
 
@@ -196,6 +249,8 @@ Any OpenAI-compatible provider can be used by changing `OPENAI_BASE_URL` and `NO
 novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
+novel-agent index-memory ./my-novel
+novel-agent agent-run ./my-novel --chapter 1 --goal "失忆剑客在雪夜发现第一条旧案线索"
 novel-agent plan-scenes ./my-novel --chapter 1
 novel-agent write-scene ./my-novel --chapter 1 --scene 1
 novel-agent compose-chapter ./my-novel --chapter 1
@@ -220,6 +275,8 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent index-memory PATH [--backend local|pgvector]
+novel-agent agent-run PATH --chapter 1 --goal GOAL
 novel-agent plan-scenes PATH --chapter 1
 novel-agent write-scene PATH --chapter 1 --scene 1
 novel-agent compose-chapter PATH --chapter 1
@@ -248,6 +305,10 @@ my-novel/
 │   └── ch001/
 │       ├── s001.md
 │       └── s002.md
+├── memory/
+│   └── vectors.jsonl
+├── runs/
+│   └── ch001-YYYYMMDD-HHMMSS.md
 ├── chapters/
 │   ├── ch001.md
 │   └── ch001.continuity.md
@@ -273,5 +334,6 @@ mypy src/novel_agent
 - [x] Chapter summary memory
 - [x] Continuity checker
 - [x] Scene-level drafting
-- [ ] Local model support examples
+- [x] Multi-agent chapter drafting pipeline
+- [x] Local vector memory and pgvector architecture support
 - [ ] Web UI

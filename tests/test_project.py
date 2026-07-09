@@ -22,6 +22,8 @@ def test_init_creates_expected_project_structure(tmp_path: Path):
     assert (target / "summaries").is_dir()
     assert (target / "scenes").is_dir()
     assert (target / "outlines" / "scenes").is_dir()
+    assert (target / "memory").is_dir()
+    assert (target / "runs").is_dir()
 
     data = yaml.safe_load((target / "novel.yaml").read_text(encoding="utf-8"))
     assert data["title"] == "镜中城"
