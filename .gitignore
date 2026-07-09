@@ -18,6 +18,11 @@ venv/
 # Build outputs
 dist/
 build/
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/tsconfig.tsbuildinfo
 
 # Generated drafts that users may not want to commit by default
 *.draft.md

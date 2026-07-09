@@ -155,11 +155,23 @@ my-novel/
 
 ## 开发
 
+Python CLI：
+
 ```bash
 pytest -q
 ruff check .
 mypy src/novel_agent
 ```
+
+Web UI：
+
+```bash
+cd web
+pnpm install
+pnpm dev
+```
+
+See `web/README.md` for the React/Next.js Web UI. It provides a local-first browser workspace built with shadcn/ui-style components, Tailwind CSS, Vercel AI SDK routes, and Zustand state.
 
 ## 路线图
 
@@ -173,7 +185,7 @@ mypy src/novel_agent
 - [x] 场景级写作
 - [x] 多 Agent 章节生成管线
 - [x] 本地向量记忆与 pgvector 架构支持
-- [ ] Web UI
+- [x] Web UI（React / Next.js / shadcn/ui-style / Vercel AI SDK / Zustand）
 
 ---
 
@@ -318,11 +330,23 @@ my-novel/
 
 ## Development
 
+Python CLI:
+
 ```bash
 pytest -q
 ruff check .
 mypy src/novel_agent
 ```
+
+Web UI:
+
+```bash
+cd web
+pnpm install
+pnpm dev
+```
+
+See `web/README.md` for the React/Next.js Web UI. It provides a local-first browser workspace built with shadcn/ui-style components, Tailwind CSS, Vercel AI SDK routes, and Zustand state.
 
 ## Roadmap
 
@@ -336,4 +360,4 @@ mypy src/novel_agent
 - [x] Scene-level drafting
 - [x] Multi-agent chapter drafting pipeline
 - [x] Local vector memory and pgvector architecture support
-- [ ] Web UI
+- [x] Web UI (React / Next.js / shadcn/ui-style / Vercel AI SDK / Zustand)
