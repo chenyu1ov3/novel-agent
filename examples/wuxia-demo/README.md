@@ -5,7 +5,10 @@
 可以运行：
 
 ```bash
-novel-agent write examples/wuxia-demo --chapter 1 --goal "沈青在雪夜发现第一具尸体，并被柳照夜怀疑"
+novel-agent plan-scenes examples/wuxia-demo --chapter 1
+novel-agent write-scene examples/wuxia-demo --chapter 1 --scene 1
+novel-agent write-scene examples/wuxia-demo --chapter 1 --scene 2
+novel-agent compose-chapter examples/wuxia-demo --chapter 1
 novel-agent summarize examples/wuxia-demo --chapter 1
 novel-agent continuity examples/wuxia-demo --chapter 1
 ```

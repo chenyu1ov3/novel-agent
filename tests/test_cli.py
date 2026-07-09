@@ -15,6 +15,9 @@ def test_cli_help_shows_core_commands():
     assert "review" in result.output
     assert "summarize" in result.output
     assert "continuity" in result.output
+    assert "plan-scenes" in result.output
+    assert "write-scene" in result.output
+    assert "compose-chapter" in result.output
 
 
 def test_init_command_creates_project(tmp_path):
@@ -25,6 +28,8 @@ def test_init_command_creates_project(tmp_path):
     assert result.exit_code == 0
     assert (target / "novel.yaml").exists()
     assert (target / "summaries").is_dir()
+    assert (target / "scenes").is_dir()
+    assert (target / "outlines" / "scenes").is_dir()
     assert "雪落长安" in result.output
 
 
@@ -118,3 +123,74 @@ def test_continuity_command_fails_when_chapter_missing(tmp_path):
 
     assert result.exit_code != 0
     assert "Chapter file does not exist" in result.output
+
+
+def test_plan_scenes_command_writes_scene_outline(monkeypatch, tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+
+    class FakeClient:
+        def complete(self, system: str, user: str, *, temperature: float = 0.7) -> str:
+            assert "场景规划" in user
+            return "# 第 1 章场景规划\n\n## 场景 1\n- 目标：发现尸体"
+
+    monkeypatch.setattr("novel_agent.cli._client", lambda: FakeClient())
+
+    result = runner.invoke(app, ["plan-scenes", str(target), "--chapter", "1"])
+
+    assert result.exit_code == 0
+    assert (target / "outlines" / "scenes" / "ch001.md").read_text(encoding="utf-8").startswith("# 第 1 章场景规划")
+
+
+def test_write_scene_command_writes_scene_without_overwriting_existing_file(monkeypatch, tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    (target / "outlines" / "scenes" / "ch001.md").write_text("# 第 1 章场景规划\n\n## 场景 1", encoding="utf-8")
+
+    class FakeClient:
+        def complete(self, system: str, user: str, *, temperature: float = 0.7) -> str:
+            assert "场景 1" in user
+            return "# 场景 1\n\n沈青踏入雪夜。"
+
+    monkeypatch.setattr("novel_agent.cli._client", lambda: FakeClient())
+
+    first = runner.invoke(app, ["write-scene", str(target), "--chapter", "1", "--scene", "1"])
+    second = runner.invoke(app, ["write-scene", str(target), "--chapter", "1", "--scene", "1"])
+
+    assert first.exit_code == 0
+    assert (target / "scenes" / "ch001" / "s001.md").read_text(encoding="utf-8").startswith("# 场景 1")
+    assert second.exit_code != 0
+    assert "Scene already exists" in second.output
+
+
+def test_compose_chapter_command_combines_scenes_without_overwriting_existing_chapter(tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    scene_dir = target / "scenes" / "ch001"
+    scene_dir.mkdir(parents=True)
+    (scene_dir / "s002.md").write_text("# 场景 2\n\n后发生。", encoding="utf-8")
+    (scene_dir / "s001.md").write_text("# 场景 1\n\n先发生。", encoding="utf-8")
+
+    first = runner.invoke(app, ["compose-chapter", str(target), "--chapter", "1"])
+    second = runner.invoke(app, ["compose-chapter", str(target), "--chapter", "1"])
+
+    assert first.exit_code == 0
+    text = (target / "chapters" / "ch001.md").read_text(encoding="utf-8")
+    assert text.index("先发生") < text.index("后发生")
+    assert second.exit_code != 0
+    assert "Chapter already exists" in second.output
+
+
+def test_compose_chapter_command_supports_force_overwrite(tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    chapter_path = target / "chapters" / "ch001.md"
+    chapter_path.write_text("旧章节", encoding="utf-8")
+    scene_dir = target / "scenes" / "ch001"
+    scene_dir.mkdir(parents=True)
+    (scene_dir / "s001.md").write_text("# 场景 1\n\n新章节。", encoding="utf-8")
+
+    result = runner.invoke(app, ["compose-chapter", str(target), "--chapter", "1", "--force"])
+
+    assert result.exit_code == 0
+    assert "新章节" in chapter_path.read_text(encoding="utf-8")

@@ -156,6 +156,80 @@ def continuity(
     console.print(f"[green]Wrote[/green] {target}")
 
 
+@app.command("plan-scenes")
+def plan_scenes(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing scene outline.")] = False,
+) -> None:
+    """Plan scenes for one chapter."""
+
+    project = NovelProject.load(path)
+    target = project.scene_outline_path(chapter)
+    if target.exists() and not force:
+        raise typer.BadParameter(f"Scene outline already exists: {target}. Use --force to overwrite.")
+    prompt = render_prompt(
+        "plan_scenes.j2",
+        title=project.config.title,
+        chapter_number=chapter,
+        context=project.read_context(before_chapter=chapter),
+    )
+    text = _client().complete(system="你是长篇小说结构编辑。", user=prompt, temperature=0.5)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {target}")
+
+
+@app.command("write-scene")
+def write_scene(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+    scene: Annotated[int, typer.Option("--scene", "-s", help="Scene number.")] = 1,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing scene draft.")] = False,
+) -> None:
+    """Write one scene draft for a chapter."""
+
+    project = NovelProject.load(path)
+    target = project.scene_path(chapter, scene)
+    if target.exists() and not force:
+        raise typer.BadParameter(f"Scene already exists: {target}. Use --force to overwrite.")
+    scene_outline_path = project.scene_outline_path(chapter)
+    scene_outline = scene_outline_path.read_text(encoding="utf-8") if scene_outline_path.exists() else ""
+    prompt = render_prompt(
+        "write_scene.j2",
+        title=project.config.title,
+        chapter_number=chapter,
+        scene_number=scene,
+        context=project.read_context(before_chapter=chapter),
+        scene_outline=scene_outline,
+        style=project.config.style,
+    )
+    text = _client().complete(system="你是专业中文小说作者。", user=prompt, temperature=0.85)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {target}")
+
+
+@app.command("compose-chapter")
+def compose_chapter(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing chapter file.")] = False,
+) -> None:
+    """Compose scene drafts into a chapter file."""
+
+    project = NovelProject.load(path)
+    target = project.chapter_path(chapter)
+    if target.exists() and not force:
+        raise typer.BadParameter(f"Chapter already exists: {target}. Use --force to overwrite.")
+    text = project.read_scene_drafts(chapter)
+    if not text:
+        raise typer.BadParameter(f"No scene drafts found for chapter {chapter}.")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {target}")
+
+
 @app.command()
 def review(
     path: Annotated[Path, typer.Argument(help="Novel project directory.")],
