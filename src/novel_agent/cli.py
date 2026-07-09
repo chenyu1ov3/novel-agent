@@ -96,10 +96,38 @@ def write(
         title=project.config.title,
         chapter_number=chapter,
         chapter_goal=goal,
-        context=project.read_context(),
+        context=project.read_context(before_chapter=chapter),
         style=project.config.style,
     )
     text = _client().complete(system="你是专业中文小说作者。", user=prompt, temperature=0.85)
+    target.write_text(text, encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {target}")
+
+
+@app.command()
+def summarize(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing summary file.")] = False,
+) -> None:
+    """Summarize a chapter into reusable long-form memory."""
+
+    project = NovelProject.load(path)
+    chapter_path = project.chapter_path(chapter)
+    if not chapter_path.exists():
+        raise typer.BadParameter(f"Chapter file does not exist: {chapter_path}")
+    target = project.summary_path(chapter)
+    if target.exists() and not force:
+        raise typer.BadParameter(f"Summary already exists: {target}. Use --force to overwrite.")
+    prompt = render_prompt(
+        "summarize.j2",
+        title=project.config.title,
+        chapter_number=chapter,
+        context=project.read_context(before_chapter=chapter),
+        chapter_text=chapter_path.read_text(encoding="utf-8"),
+    )
+    text = _client().complete(system="你是长篇小说的剧情记录员。", user=prompt, temperature=0.2)
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
     console.print(f"[green]Wrote[/green] {target}")
 

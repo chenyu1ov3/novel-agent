@@ -6,4 +6,5 @@
 
 ```bash
 novel-agent write examples/wuxia-demo --chapter 1 --goal "沈青在雪夜发现第一具尸体，并被柳照夜怀疑"
+novel-agent summarize examples/wuxia-demo --chapter 1
 ```
