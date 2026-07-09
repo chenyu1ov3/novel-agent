@@ -18,7 +18,7 @@
 3. 生成主线和章节大纲。
 4. 将 bible、大纲、摘要、章节和场景索引进向量记忆。
 5. 使用多 Agent 流程写章节：剧情架构师 → 连续性守门人 → 场景写手 → 文风润色编辑 → 终审批评家。
-6. 对章节做一致性和文风审稿，保留完整 agent trace 方便人工复盘。
+7. 在 Web UI 中打开项目、编辑 Markdown/YAML、索引记忆、触发多 Agent 写作并查看运行结果。
 
 ## 设计原则
 
@@ -27,6 +27,7 @@
 - 默认不覆盖人工编辑过的章节。
 - 复杂能力必须可追踪：多 Agent 每一步都写入 `runs/`。
 - 先保证 CLI 工作流稳定，再叠加 Web UI / API 服务。
+- Web UI 先本地优先，明确标注本地文件系统和命令执行边界。
 - 本地开发可零依赖运行；生产部署可升级到 OpenAI-compatible embeddings + pgvector。
 
 ## 技术架构
@@ -38,3 +39,7 @@
 - Postgres + pgvector（可选生产后端）
 - Pydantic 配置/状态模型
 - Markdown/YAML 项目资产
+- React / Next.js App Router Web UI
+- shadcn/ui-style 组件 + Tailwind CSS
+- Vercel AI SDK 数据流接口
+- Zustand 前端状态管理

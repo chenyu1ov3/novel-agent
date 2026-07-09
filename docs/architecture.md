@@ -28,7 +28,7 @@ The CLI still preserves the original simple commands (`brainstorm`, `outline`, `
 - `novel_agent.vector_store`: retrieval layer with local JSONL vectors, OpenAI-compatible embeddings, pgvector SQL/schema support, and safe SQL identifier validation.
 - `novel_agent.agents`: declarative agent registry and chapter-drafting orchestrator.
 - `novel_agent.prompting`: packaged Jinja2 prompt rendering for legacy single-agent commands.
-- `novel_agent.prompts`: editable prompt templates.
+- `web/`: Next.js App Router Web UI for local-first project browsing, editing, memory indexing, and multi-agent run control.
 
 ## Multi-Agent Roles
 
@@ -106,6 +106,18 @@ novel-agent agent-run ./my-novel --chapter 2 --goal "主角追查铜铃线索"
 ```
 
 The orchestrator retrieves relevant memory, then passes the result through the five-agent pipeline.
+
+## Web UI Architecture
+
+The `web/` app is a local-first React/Next.js workspace:
+
+- **Framework:** Next.js App Router.
+- **UI:** Tailwind CSS with shadcn/ui-style local primitives.
+- **State:** Zustand (`store/novel-workspace.ts`).
+- **AI route boundary:** Vercel AI SDK data stream route at `app/api/agent/run/route.ts`.
+- **Project adapter:** `lib/novel-agent.ts` reads/writes Markdown/YAML files and invokes the Python CLI for memory indexing and agent runs.
+
+The Web UI deliberately keeps Markdown/YAML project files as the source of truth. Hosted deployments need a hardened storage and command-execution boundary before public exposure.
 
 ## Extension Points
 
