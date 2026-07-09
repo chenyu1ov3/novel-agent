@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+.venv/
+
+# Local secrets
+.env
+
+# Generated drafts that users may not want to commit by default
+*.draft.md
+*.review.tmp.md
