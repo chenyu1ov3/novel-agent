@@ -21,3 +21,20 @@ def test_render_summarize_prompt_includes_chapter_text():
     assert "雪落长安" in output
     assert "第 1 章" in output
     assert "沈青在雪夜发现尸体" in output
+
+
+def test_render_continuity_prompt_includes_required_sections():
+    output = render_prompt(
+        "continuity.j2",
+        title="雪落长安",
+        chapter_number=1,
+        context="角色：沈青",
+        chapter_text="沈青在雪夜发现尸体。",
+    )
+
+    assert "雪落长安" in output
+    assert "第 1 章" in output
+    assert "人物一致性" in output
+    assert "时间线冲突" in output
+    assert "设定冲突" in output
+    assert "沈青在雪夜发现尸体" in output
