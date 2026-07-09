@@ -133,6 +133,30 @@ def summarize(
 
 
 @app.command()
+def continuity(
+    path: Annotated[Path, typer.Argument(help="Novel project directory.")],
+    chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,
+) -> None:
+    """Check a chapter for continuity issues against the project context."""
+
+    project = NovelProject.load(path)
+    chapter_path = project.chapter_path(chapter)
+    if not chapter_path.exists():
+        raise typer.BadParameter(f"Chapter file does not exist: {chapter_path}")
+    prompt = render_prompt(
+        "continuity.j2",
+        title=project.config.title,
+        chapter_number=chapter,
+        context=project.read_context(before_chapter=chapter),
+        chapter_text=chapter_path.read_text(encoding="utf-8"),
+    )
+    text = _client().complete(system="你是严格的长篇小说连续性编辑。", user=prompt, temperature=0.2)
+    target = project.chapter_path(chapter, suffix=".continuity.md")
+    target.write_text(text, encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {target}")
+
+
+@app.command()
 def review(
     path: Annotated[Path, typer.Argument(help="Novel project directory.")],
     chapter: Annotated[int, typer.Option("--chapter", "-c", help="Chapter number.")] = 1,

@@ -14,6 +14,7 @@ def test_cli_help_shows_core_commands():
     assert "write" in result.output
     assert "review" in result.output
     assert "summarize" in result.output
+    assert "continuity" in result.output
 
 
 def test_init_command_creates_project(tmp_path):
@@ -85,3 +86,35 @@ def test_write_command_includes_previous_summaries_only(monkeypatch, tmp_path):
     result = runner.invoke(app, ["write", str(target), "--chapter", "2"])
 
     assert result.exit_code == 0
+
+
+def test_continuity_command_writes_report(monkeypatch, tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+    chapter_path = target / "chapters" / "ch001.md"
+    chapter_path.write_text("# 第 1 章\n\n沈青在雪夜发现尸体。", encoding="utf-8")
+    (target / "summaries" / "ch000.md").write_text("前情：玄灯旧案。", encoding="utf-8")
+
+    class FakeClient:
+        def complete(self, system: str, user: str, *, temperature: float = 0.7) -> str:
+            assert "沈青在雪夜发现尸体" in user
+            assert "人物一致性" in user
+            return "# 第 1 章连续性检查\n\n## 总体结论\n\n无明显冲突。"
+
+    monkeypatch.setattr("novel_agent.cli._client", lambda: FakeClient())
+
+    result = runner.invoke(app, ["continuity", str(target), "--chapter", "1"])
+
+    assert result.exit_code == 0
+    report = target / "chapters" / "ch001.continuity.md"
+    assert report.read_text(encoding="utf-8").startswith("# 第 1 章连续性检查")
+
+
+def test_continuity_command_fails_when_chapter_missing(tmp_path):
+    target = tmp_path / "demo"
+    runner.invoke(app, ["init", str(target), "--title", "雪落长安", "--genre", "武侠"])
+
+    result = runner.invoke(app, ["continuity", str(target), "--chapter", "1"])
+
+    assert result.exit_code != 0
+    assert "Chapter file does not exist" in result.output
