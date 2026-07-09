@@ -41,6 +41,8 @@ class NovelProject:
         (project_root / "outlines").mkdir(exist_ok=True)
         (project_root / "chapters").mkdir(exist_ok=True)
         (project_root / "summaries").mkdir(exist_ok=True)
+        (project_root / "scenes").mkdir(exist_ok=True)
+        (project_root / "outlines" / "scenes").mkdir(parents=True, exist_ok=True)
 
         config = NovelConfig(
             title=title,
@@ -82,6 +84,21 @@ class NovelProject:
 
     def summary_path(self, number: int) -> Path:
         return self.root / "summaries" / f"ch{number:03d}.md"
+
+    def scene_outline_path(self, chapter: int) -> Path:
+        return self.root / "outlines" / "scenes" / f"ch{chapter:03d}.md"
+
+    def scene_path(self, chapter: int, scene: int) -> Path:
+        return self.root / "scenes" / f"ch{chapter:03d}" / f"s{scene:03d}.md"
+
+    def read_scene_drafts(self, chapter: int) -> str:
+        scene_dir = self.root / "scenes" / f"ch{chapter:03d}"
+        if not scene_dir.exists():
+            return ""
+        parts: list[str] = []
+        for path in sorted(scene_dir.glob("s*.md")):
+            parts.append(path.read_text(encoding="utf-8"))
+        return "\n\n---\n\n".join(parts)
 
     def read_summaries(self, *, before_chapter: int | None = None) -> str:
         summary_dir = self.root / "summaries"

@@ -62,7 +62,9 @@ NOVEL_AGENT_MODEL=gpt-4o-mini
 novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
-novel-agent write ./my-novel --chapter 1 --goal "主角在雪夜发现第一具尸体"
+novel-agent plan-scenes ./my-novel --chapter 1
+novel-agent write-scene ./my-novel --chapter 1 --scene 1
+novel-agent compose-chapter ./my-novel --chapter 1
 novel-agent summarize ./my-novel --chapter 1
 novel-agent continuity ./my-novel --chapter 1
 novel-agent review ./my-novel --chapter 1
@@ -74,6 +76,8 @@ novel-agent review ./my-novel --chapter 1
 
 `continuity` 会把章节正文与项目设定、角色卡、时间线、大纲和前文摘要进行对照，输出 `chapters/ch001.continuity.md`，用于发现人物动机、时间线、世界观、伏笔和文风方面的连续性问题。
 
+如果想更稳定地写长章节，可以使用场景级流程：`plan-scenes` 先规划一章的多个场景，`write-scene` 单独写某个场景，`compose-chapter` 再按顺序合并成章节正文。
+
 ## 命令列表
 
 ```bash
@@ -82,6 +86,9 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent plan-scenes PATH --chapter 1
+novel-agent write-scene PATH --chapter 1 --scene 1
+novel-agent compose-chapter PATH --chapter 1
 novel-agent summarize PATH --chapter 1
 novel-agent continuity PATH --chapter 1
 novel-agent review PATH --chapter 1
@@ -102,7 +109,13 @@ my-novel/
 │   └── style.md
 ├── outlines/
 │   ├── arc.md
-│   └── chapters.md
+│   ├── chapters.md
+│   └── scenes/
+│       └── ch001.md
+├── scenes/
+│   └── ch001/
+│       ├── s001.md
+│       └── s002.md
 ├── chapters/
 │   ├── ch001.md
 │   └── ch001.continuity.md
@@ -127,7 +140,7 @@ mypy src/novel_agent
 - [x] `brainstorm` / `outline` / `write` / `review` 命令
 - [x] 章节摘要记忆
 - [x] 一致性检查器
-- [ ] 场景级写作
+- [x] 场景级写作
 - [ ] 本地模型使用示例
 - [ ] Web UI
 
@@ -183,7 +196,9 @@ Any OpenAI-compatible provider can be used by changing `OPENAI_BASE_URL` and `NO
 novel-agent init ./my-novel --title "雪落长安" --genre "武侠悬疑"
 novel-agent brainstorm ./my-novel --idea "一个失忆剑客发现自己曾是反派"
 novel-agent outline ./my-novel
-novel-agent write ./my-novel --chapter 1 --goal "主角在雪夜发现第一具尸体"
+novel-agent plan-scenes ./my-novel --chapter 1
+novel-agent write-scene ./my-novel --chapter 1 --scene 1
+novel-agent compose-chapter ./my-novel --chapter 1
 novel-agent summarize ./my-novel --chapter 1
 novel-agent continuity ./my-novel --chapter 1
 novel-agent review ./my-novel --chapter 1
@@ -195,6 +210,8 @@ If `chapters/ch001.md` already exists, `write` will create `chapters/ch001.draft
 
 `continuity` checks a chapter against the project bible, character cards, timeline, outline, and previous summaries, then writes `chapters/ch001.continuity.md` with concrete continuity issues and revision suggestions.
 
+For more stable long chapters, use the scene-level flow: `plan-scenes` plans scenes for a chapter, `write-scene` drafts one scene, and `compose-chapter` combines scene drafts in order.
+
 ## Commands
 
 ```bash
@@ -203,6 +220,9 @@ novel-agent init PATH --title TITLE --genre GENRE
 novel-agent brainstorm PATH --idea IDEA
 novel-agent outline PATH
 novel-agent write PATH --chapter 1 --goal GOAL
+novel-agent plan-scenes PATH --chapter 1
+novel-agent write-scene PATH --chapter 1 --scene 1
+novel-agent compose-chapter PATH --chapter 1
 novel-agent summarize PATH --chapter 1
 novel-agent continuity PATH --chapter 1
 novel-agent review PATH --chapter 1
@@ -221,7 +241,13 @@ my-novel/
 │   └── style.md
 ├── outlines/
 │   ├── arc.md
-│   └── chapters.md
+│   ├── chapters.md
+│   └── scenes/
+│       └── ch001.md
+├── scenes/
+│   └── ch001/
+│       ├── s001.md
+│       └── s002.md
 ├── chapters/
 │   ├── ch001.md
 │   └── ch001.continuity.md
@@ -246,6 +272,6 @@ mypy src/novel_agent
 - [x] `brainstorm` / `outline` / `write` / `review` commands
 - [x] Chapter summary memory
 - [x] Continuity checker
-- [ ] Scene-level drafting
+- [x] Scene-level drafting
 - [ ] Local model support examples
 - [ ] Web UI

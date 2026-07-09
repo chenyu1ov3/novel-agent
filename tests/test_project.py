@@ -20,6 +20,8 @@ def test_init_creates_expected_project_structure(tmp_path: Path):
     assert (target / "outlines" / "chapters.md").exists()
     assert (target / "chapters").is_dir()
     assert (target / "summaries").is_dir()
+    assert (target / "scenes").is_dir()
+    assert (target / "outlines" / "scenes").is_dir()
 
     data = yaml.safe_load((target / "novel.yaml").read_text(encoding="utf-8"))
     assert data["title"] == "镜中城"
@@ -74,3 +76,24 @@ def test_read_context_includes_previous_summaries_for_target_chapter(tmp_path: P
     context = project.read_context(before_chapter=2)
 
     assert "主角获得星图" in context
+
+
+def test_scene_outline_and_scene_paths_are_zero_padded(tmp_path: Path):
+    target = tmp_path / "my-novel"
+    project = NovelProject.init(target, title="星海旧约")
+
+    assert project.scene_outline_path(7) == target / "outlines" / "scenes" / "ch007.md"
+    assert project.scene_path(7, 3) == target / "scenes" / "ch007" / "s003.md"
+
+
+def test_read_scene_drafts_returns_scenes_in_order(tmp_path: Path):
+    target = tmp_path / "my-novel"
+    project = NovelProject.init(target, title="星海旧约")
+    project.scene_path(1, 2).parent.mkdir(parents=True, exist_ok=True)
+    project.scene_path(1, 2).write_text("# 场景 2\n\n后发生。", encoding="utf-8")
+    project.scene_path(1, 1).write_text("# 场景 1\n\n先发生。", encoding="utf-8")
+
+    drafts = project.read_scene_drafts(1)
+
+    assert drafts.startswith("# 场景 1")
+    assert drafts.index("先发生") < drafts.index("后发生")
